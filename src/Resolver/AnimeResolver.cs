@@ -95,7 +95,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			if (args.Path.IndexOf("anime", 0, StringComparison.OrdinalIgnoreCase) == -1) return null;
 
 			var type = GetFileType(args.Path, args.Parent.Path, args.IsDirectory);
-			Logger.LogInformation($"{args.Path} is {type}");
+			Logger.LogDebug($"{args.Path} is {type}");
 
 			if (type == FileType.FolderFranchise)
 			{
