@@ -4,6 +4,9 @@ _A proper name should still be considered._
 Jellyfin resolvers provide the functionality that assigns proper types like "season" or "episode" to files and folders.
 This plugin adds a new resolver to Jellyfin that uses [Anitomy](https://github.com/erengy/anitomy) to parse files. Additionally the way the folder structure is defined is changed to better suit anime watchers.
 
+## Building
+Because the package used (AnitomySharp) was not compatible with netstandard I make my own fork. The fork needs to be cloned locally next to this repository. 
+
 ## Current state
 The plugin is usable to a certain degree. Unfortunately the Jellyfin server doesn't support alternative resolvers properly so this plugin needs to do some hacks to get it working:
 - It defines a high priority so it will run before most of the other build-in resolvers
