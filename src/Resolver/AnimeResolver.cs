@@ -107,12 +107,14 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			}
 			else if (type == FileType.FolderAnime)
 			{
+				var name = Regex.Replace(args.FileInfo.Name, @"^\d+\.\s", "");
+					
 				return new Series
 				{
 					Path = args.Path,
-					Name = Regex.Replace(args.FileInfo.Name, @"^\d+\.\s", ""),
-					SortName = args.FileInfo.Name,
-					ForcedSortName = args.FileInfo.Name,
+					Name = name,
+					SortName = name,
+					ForcedSortName = name,
 					IndexNumber = int.Parse(Regex.Match(args.FileInfo.Name, @"^(\d+)\.\s").Groups[1].Value)
 				};
 			}
