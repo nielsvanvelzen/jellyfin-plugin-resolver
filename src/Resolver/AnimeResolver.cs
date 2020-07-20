@@ -39,9 +39,9 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 
 		// Make sure to set the priority as high as possible
 		public ResolverPriority Priority => ResolverPriority.First;
-		private ILogger Logger { get; set; }
+		private ILogger<AnimeEpisodeResolver> Logger { get; set; }
 
-		public AnimeEpisodeResolver(ILogger logger)
+		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger)
 		{
 			this.Logger = logger;
 		}
