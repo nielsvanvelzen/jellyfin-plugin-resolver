@@ -1,12 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
-		<RootNamespace>Jellyfin.Plugin.Resolver</RootNamespace>
+		<TargetFramework>net6.0</TargetFramework>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="../AnitomySharp/AnitomySharp/AnitomySharp.csproj" />
-		<PackageReference Include="Jellyfin.Controller" Version="10.*-*" />
-		<PackageReference Include="Jellyfin.Model" Version="10.*-*" />
+		<PackageReference Include="Jellyfin.Controller" Version="10.8.0-beta1" />
 	</ItemGroup>
 </Project>
