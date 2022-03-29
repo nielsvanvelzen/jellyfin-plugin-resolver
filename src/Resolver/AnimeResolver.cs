@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.Resolver.Api;
+using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Resolvers;
+using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using Microsoft.Extensions.Logging;
-using Jellyfin.Plugin.Resolver.Api;
 
 namespace Jellyfin.Plugin.Resolver.Resolver
 {
@@ -39,11 +41,13 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 
 		// Make sure to set the priority as high as possible
 		public ResolverPriority Priority => ResolverPriority.First;
-		private ILogger<AnimeEpisodeResolver> Logger { get; set; }
+		private readonly ILogger<AnimeEpisodeResolver> _logger;
+		private readonly IServerApplicationPaths _appPaths;
 
-		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger)
+		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger, IServerApplicationPaths appPaths)
 		{
-			this.Logger = logger;
+			_logger = logger;
+			_appPaths = appPaths;
 		}
 
 		private static FileType GetFolderType(string path)
@@ -86,7 +90,8 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 		{
 			// Only for tv shows folders
 			// Empty collection type is "programdata" folder
-			if (args.CollectionType == null || !args.CollectionType.Equals(CollectionType.TvShows, StringComparison.OrdinalIgnoreCase))
+			if (args.CollectionType == null ||
+			    !args.CollectionType.Equals(CollectionType.TvShows, StringComparison.OrdinalIgnoreCase))
 			{
 				return null;
 			}
@@ -95,7 +100,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			if (args.Path.IndexOf("anime", 0, StringComparison.OrdinalIgnoreCase) == -1) return null;
 
 			var type = GetFileType(args.Path, args.Parent.Path, args.IsDirectory);
-			Logger.LogDebug($"{args.Path} is {type}");
+			_logger.LogDebug($"{args.Path} is {type}");
 
 			if (type == FileType.FolderFranchise)
 			{
@@ -108,7 +113,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			else if (type == FileType.FolderAnime)
 			{
 				var name = Regex.Replace(args.FileInfo.Name, @"^\d+\.\s", "");
-					
+
 				return new Series
 				{
 					Path = args.Path,
@@ -159,10 +164,64 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			return null;
 		}
 
-		public MultiItemResolverResult ResolveMultiple(Folder parent, List<FileSystemMetadata> files, string collectionType, IDirectoryService directoryService)
+		private MultiItemResolverResult ResolveVideos(
+			Folder parent,
+			IEnumerable<FileSystemMetadata> fileSystemEntries,
+			string collectionType,
+			IDirectoryService directoryService
+		)
 		{
+			var files = new List<FileSystemMetadata>();
+			var leftOver = new List<FileSystemMetadata>();
+
+			// Loop through each child file/folder and see if we find a video
+			foreach (var child in fileSystemEntries)
+			{
+				if (child.IsDirectory)
+				{
+					leftOver.Add(child);
+				}
+				else
+				{
+					files.Add(child);
+				}
+			}
+
+			var items = new List<BaseItem>();
+
+			foreach (var file in files)
+			{
+				var item = ResolvePath(new ItemResolveArgs(_appPaths, directoryService)
+				{
+					Parent = parent,
+					CollectionType = collectionType,
+					FileInfo = file,
+					FileSystemChildren = Array.Empty<FileSystemMetadata>(),
+					LibraryOptions = new LibraryOptions()
+				});
+				if (item == null) leftOver.Add(file);
+				else items.Add(item);
+			}
+
+			return new MultiItemResolverResult
+			{
+				ExtraFiles = leftOver,
+				Items = items,
+			};
+		}
+
+		public MultiItemResolverResult ResolveMultiple(Folder parent, List<FileSystemMetadata> files,
+			string collectionType, IDirectoryService directoryService)
+		{
+			if (string.Equals(collectionType, CollectionType.TvShows, StringComparison.OrdinalIgnoreCase))
+			{
+				// Only enable for anime libraries (todo: better detection)
+				if (parent.Path.IndexOf("anime", 0, StringComparison.OrdinalIgnoreCase) == -1) return null;
+
+				return ResolveVideos(parent, files, collectionType, directoryService);
+			}
+
 			return null;
-//			throw new System.NotImplementedException();
 		}
 	}
 }
