@@ -39,8 +39,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			".mp4"
 		};
 
-		// Make sure to set the priority as high as possible
-		public ResolverPriority Priority => ResolverPriority.First;
+		public ResolverPriority Priority => ResolverPriority.Plugin;
 		private readonly ILogger<AnimeEpisodeResolver> _logger;
 		private readonly IServerApplicationPaths _appPaths;
 
