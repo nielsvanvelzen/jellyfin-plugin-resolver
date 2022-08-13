@@ -149,8 +149,8 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 				// Set name
 				if (anitomy.EpisodeTitle != null)
 					episode.Name = anitomy.EpisodeTitle;
-				else if (episodeNumber != null)
-					episode.Name = $"Episode {episodeNumber}";
+				// else if (episodeNumber != null)
+				// 	episode.Name = $"Episode {episodeNumber}";
 				else
 					episode.Name = args.FileInfo.Name;
 
