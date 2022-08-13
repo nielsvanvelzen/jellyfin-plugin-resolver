@@ -5,6 +5,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="../AnitomySharp/AnitomySharp/AnitomySharp.csproj" />
-		<PackageReference Include="Jellyfin.Controller" Version="10.8.0" />
+		<PackageReference Include="Jellyfin.Controller" Version="10.8.3" />
 	</ItemGroup>
 </Project>

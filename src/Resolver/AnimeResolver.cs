@@ -127,7 +127,8 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 				var path = new Season
 				{
 					Path = args.Path,
-					Name = args.LibraryOptions.SeasonZeroDisplayName
+					Name = args.LibraryOptions.SeasonZeroDisplayName,
+					IndexNumber = 0,
 				};
 
 				return path;
