@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Emby.Naming.Common;
 using Jellyfin.Data.Enums;
+using Jellyfin.Extensions;
 using Jellyfin.Plugin.Resolver.Api;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
@@ -25,8 +27,6 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 		FolderExtra, // Can not be nested, always has anime as parent
 
 		FileEpisode, // Always has anime as parent
-
-		// Todo: FileRecap, FileOpening, FileEnding etc.
 		FileExtra, // Always has extra as parent
 
 		Unknown // No clue what this file is
@@ -34,25 +34,25 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 
 	public class AnimeEpisodeResolver : IItemResolver, IMultiItemResolver
 	{
-		private static readonly string[] VideoExtensions =
-		{
-			".mkv",
-			".mp4"
-		};
+		private static readonly string[] AnimeTypeThemes = ["ED", "ENDING", "NCED", "NCOP", "OP", "OPENING"];
+		private static readonly string[] AnimeTypeTrailer = ["PV", "Teaser", "TRAILER", "CM", "SPOT"];
+		private static readonly string[] AnimeTypeInterview = ["INTERVIEW"];
 
 		public ResolverPriority Priority => ResolverPriority.Plugin;
 		private readonly ILogger<AnimeEpisodeResolver> _logger;
 		private readonly IServerApplicationPaths _appPaths;
 		private readonly ILibraryManager _libraryManager;
+		private readonly NamingOptions _namingOptions;
 
-		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger, IServerApplicationPaths appPaths, ILibraryManager libraryManager)
+		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger, IServerApplicationPaths appPaths, ILibraryManager libraryManager, NamingOptions namingOptions)
 		{
 			_logger = logger;
 			_appPaths = appPaths;
 			_libraryManager = libraryManager;
+			_namingOptions = namingOptions;
 		}
 
-		private static FileType GetFolderType(string path)
+		private FileType GetFolderType(string path)
 		{
 			var basename = Path.GetFileName(path);
 
@@ -60,14 +60,14 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 
 			FileType type;
 
-			if (basename.Equals("extra")) type = FileType.FolderExtra;
+			if (_namingOptions.AllExtrasTypesFolderNames.Keys.Contains(basename, StringComparison.InvariantCultureIgnoreCase)) type = FileType.FolderExtra;
 			else if (Regex.IsMatch(basename, @"^\d+\.\s")) type = FileType.FolderAnime;
 			else type = FileType.FolderFranchise;
 
 			return type;
 		}
 
-		private static FileType? GetFileType(string path, string parentPath, bool isDirectory)
+		private FileType? GetFileType(string path, string parentPath, bool isDirectory)
 		{
 			var type = FileType.Unknown;
 
@@ -79,13 +79,24 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			{
 				var parentType = GetFolderType(parentPath);
 				var extension = Path.GetExtension(path);
-				var isVideo = VideoExtensions.Contains(extension);
+				var isVideo = _namingOptions.VideoFileExtensions.Contains(extension);
 
 				if (isVideo && parentType == FileType.FolderExtra) type = FileType.FileExtra;
 				else if (isVideo && parentType == FileType.FolderAnime) type = FileType.FileEpisode;
 			}
 
 			return type;
+		}
+
+		private static ExtraType GetExtraType(Anitomy anitomy)
+		{
+			var animeType = anitomy.AnimeType ?? string.Empty;
+
+			if (AnimeTypeThemes.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.ThemeVideo;
+			if (AnimeTypeTrailer.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.Trailer;
+			if (AnimeTypeInterview.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.Interview;
+
+			return ExtraType.Unknown;
 		}
 
 		public BaseItem ResolvePath(ItemResolveArgs args)
@@ -103,7 +114,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			var type = GetFileType(args.Path, args.Parent.Path, args.IsDirectory);
 			_logger.LogDebug($"{args.Path} is {type}");
 
-			if (type == FileType.FolderFranchise)
+			if (type is FileType.FolderFranchise or FileType.FolderExtra)
 			{
 				return new Folder
 				{
@@ -111,7 +122,8 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 					Name = args.FileInfo.Name
 				};
 			}
-			else if (type == FileType.FolderAnime)
+
+			if (type is FileType.FolderAnime)
 			{
 				var name = Regex.Replace(args.FileInfo.Name, @"^\d+\.\s", "");
 
@@ -124,43 +136,41 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 					IndexNumber = int.Parse(Regex.Match(args.FileInfo.Name, @"^(\d+)\.\s").Groups[1].Value)
 				};
 			}
-			else if (type == FileType.FolderExtra)
-			{
-				var path = new Season
-				{
-					Path = args.Path,
-					Name = args.LibraryOptions.SeasonZeroDisplayName,
-					IndexNumber = 0,
-				};
 
-				return path;
-			}
-			else if (type == FileType.FileEpisode)
+			if (type is FileType.FileEpisode or FileType.FileExtra)
 			{
-				var episode = new Episode
-				{
-					Path = args.Path,
-					SortName = args.FileInfo.Name,
-					ForcedSortName = args.FileInfo.Name,
-					ParentIndexNumber = 1 // Set as "first season" item
-				};
-
 				var anitomy = new Anitomy(args.FileInfo.Name);
-				var episodeNumber = anitomy.GetEpisodeNumberAsInt();
+				var video = type == FileType.FileEpisode ? new Episode() : new Video();
+				video.Path = args.Path;
+				video.SortName = args.FileInfo.Name;
+				video.Name = args.FileInfo.Name;
+				video.ForcedSortName = args.FileInfo.Name;
+				video.ParentIndexNumber = 1; // Set as "first season" item
 
-				// Set name
-				if (anitomy.EpisodeTitle != null)
-					episode.Name = anitomy.EpisodeTitle;
-				// else if (episodeNumber != null)
-				// 	episode.Name = $"Episode {episodeNumber}";
-				else
-					episode.Name = args.FileInfo.Name;
+				// Set episode metadata
+				if (type == FileType.FileEpisode)
+				{
+					// Set name
+					if (anitomy.EpisodeTitle != null) video.Name = anitomy.EpisodeTitle;
+					// else if (episodeNumber != null) video.Name = $"Episode {episodeNumber}";
 
-				// Set index
-				if (episodeNumber != null)
-					episode.IndexNumber = episodeNumber;
+					// Set index
+					var episodeNumber = anitomy.GetEpisodeNumberAsInt();
+					if (episodeNumber != null) video.IndexNumber = episodeNumber;
+				}
 
-				return episode;
+				// Set extra metadata
+				if (type == FileType.FileExtra)
+				{
+					video.ExtraType = GetExtraType(anitomy);
+
+					// TODO: Extras are hard-refreshed after a scan in the BaseItem.RefreshExtras method using the (hardcoded) ExtraResolver
+					// returning an extra here will create it, but it won't be bound to the series item so it's quite useless
+					// For now, return null and let the server deal with it
+					return null;
+				}
+
+				return video;
 			}
 
 			return null;

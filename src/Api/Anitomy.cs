@@ -6,6 +6,7 @@ namespace Jellyfin.Plugin.Resolver.Api
 	{
 		public string EpisodeTitle { get; set; }
 		public string EpisodeNumber { get; set; }
+		public string AnimeType { get; set; }
 
 		public Anitomy()
 		{
@@ -38,13 +39,9 @@ namespace Jellyfin.Plugin.Resolver.Api
 					case Element.ElementCategory.ElementEpisodeNumber:
 						EpisodeNumber = element.Value;
 						break;
-//					case Element.ElementCategory.ElementSource:
-//						if (element.Value.ToUpper().Contains("BD"))
-//							episode.VideoType = VideoType.BluRay;
-//						else if (element.Value.ToUpper().Contains("DVD"))
-//							episode.VideoType = VideoType.Dvd;
-//
-//						break;
+					case Element.ElementCategory.ElementAnimeType:
+						AnimeType = element.Value;
+						break;
 				}
 			}
 		}
