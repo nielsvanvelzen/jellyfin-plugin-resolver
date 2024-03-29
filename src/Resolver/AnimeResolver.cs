@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Resolver.Api;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Entities;
@@ -42,11 +43,13 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 		public ResolverPriority Priority => ResolverPriority.Plugin;
 		private readonly ILogger<AnimeEpisodeResolver> _logger;
 		private readonly IServerApplicationPaths _appPaths;
+		private readonly ILibraryManager _libraryManager;
 
-		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger, IServerApplicationPaths appPaths)
+		public AnimeEpisodeResolver(ILogger<AnimeEpisodeResolver> logger, IServerApplicationPaths appPaths, ILibraryManager libraryManager)
 		{
 			_logger = logger;
 			_appPaths = appPaths;
+			_libraryManager = libraryManager;
 		}
 
 		private static FileType GetFolderType(string path)
@@ -89,8 +92,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 		{
 			// Only for tv shows folders
 			// Empty collection type is "programdata" folder
-			if (args.CollectionType == null ||
-			    !args.CollectionType.Equals(CollectionType.TvShows, StringComparison.OrdinalIgnoreCase))
+			if (args.CollectionType is not CollectionType.tvshows)
 			{
 				return null;
 			}
@@ -167,8 +169,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 		private MultiItemResolverResult ResolveVideos(
 			Folder parent,
 			IEnumerable<FileSystemMetadata> fileSystemEntries,
-			string collectionType,
-			IDirectoryService directoryService
+			CollectionType collectionType
 		)
 		{
 			var files = new List<FileSystemMetadata>();
@@ -191,7 +192,7 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 
 			foreach (var file in files)
 			{
-				var item = ResolvePath(new ItemResolveArgs(_appPaths, directoryService)
+				var item = ResolvePath(new ItemResolveArgs(_appPaths, _libraryManager)
 				{
 					Parent = parent,
 					CollectionType = collectionType,
@@ -210,18 +211,14 @@ namespace Jellyfin.Plugin.Resolver.Resolver
 			};
 		}
 
-		public MultiItemResolverResult ResolveMultiple(Folder parent, List<FileSystemMetadata> files,
-			string collectionType, IDirectoryService directoryService)
+		public MultiItemResolverResult ResolveMultiple(Folder parent, List<FileSystemMetadata> files, CollectionType? collectionType, IDirectoryService directoryService)
 		{
-			if (string.Equals(collectionType, CollectionType.TvShows, StringComparison.OrdinalIgnoreCase))
-			{
-				// Only enable for anime libraries (todo: better detection)
-				if (parent.Path.IndexOf("anime", 0, StringComparison.OrdinalIgnoreCase) == -1) return null;
+			if (collectionType is not CollectionType.tvshows) return new MultiItemResolverResult();
 
-				return ResolveVideos(parent, files, collectionType, directoryService);
-			}
+			// Only enable for anime libraries (todo: better detection)
+			if (parent.Path.IndexOf("anime", 0, StringComparison.OrdinalIgnoreCase) == -1) return new MultiItemResolverResult();
 
-			return null;
+			return ResolveVideos(parent, files, collectionType.Value);
 		}
 	}
 }
