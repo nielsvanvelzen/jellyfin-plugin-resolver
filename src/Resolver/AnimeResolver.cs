@@ -67,7 +67,7 @@ public class AnimeEpisodeResolver(
 			return video;
 		}
 		
-		// Note: FileExtra is handled in ExtraMetadataProvider
+		// Note: FileExtra* is handled in ExtraMetadataProvider
 
 		return null;
 	}

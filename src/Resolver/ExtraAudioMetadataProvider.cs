@@ -3,20 +3,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Emby.Naming.Common;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Resolver.Resolver;
 
-public class ExtraMetadataProvider(
-	ILogger<AnimeEpisodeResolver> logger,
+public class ExtraAudioMetadataProvider(
+	ILogger<ExtraAudioMetadataProvider> logger,
 	NamingOptions namingOptions
-) : ICustomMetadataProvider<Video>
+) : ICustomMetadataProvider<Audio>
 {
-	public string Name => "ExtraMetadataProvider";
+	public string Name => nameof(ExtraAudioMetadataProvider);
 
-	public Task<ItemUpdateType> FetchAsync(Video item, MetadataRefreshOptions options, CancellationToken cancellationToken)
+	public Task<ItemUpdateType> FetchAsync(Audio item, MetadataRefreshOptions options, CancellationToken cancellationToken)
 	{
 		// Not a supported path
 		if (!AnimeScanner.SupportsPath(item.Path)) return Task.FromResult(ItemUpdateType.None);
@@ -25,10 +26,10 @@ public class ExtraMetadataProvider(
 		logger.LogDebug($"{item.Path} is {type}");
 
 		// Not an extra
-		if (type != AnimeScanner.FileType.FileExtra) return Task.FromResult(ItemUpdateType.None);
+		if (type != AnimeScanner.FileType.FileExtraAudio) return Task.FromResult(ItemUpdateType.None);
 
 		// Apply metadata
-		AnimeScanner.ApplyVideoMetadata(item, AnimeScanner.FileType.FileExtra);
+		AnimeScanner.ApplyAudioMetadata(item, AnimeScanner.FileType.FileExtraAudio);
 		logger.LogDebug($"{item.Path} is {item.ExtraType}");
 		
 		// Return as edit

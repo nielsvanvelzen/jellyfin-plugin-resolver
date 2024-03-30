@@ -6,6 +6,7 @@ using Emby.Naming.Common;
 using Jellyfin.Extensions;
 using Jellyfin.Plugin.Resolver.Api;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Model.Entities;
 
 namespace Jellyfin.Plugin.Resolver.Resolver;
@@ -19,11 +20,12 @@ public static class AnimeScanner
 	public enum FileType
 	{
 		FolderFranchise, // Can be nested
-		FolderAnime, // Can not be nested, always has franchise as parent
-		FolderExtra, // Can not be nested, always has anime as parent
+		FolderAnime, // Can not be nested, always has FolderFranchise as parent
+		FolderExtra, // Can not be nested, always has FolderAnime as parent
 
-		FileEpisode, // Always has anime as parent
-		FileExtra, // Always has extra as parent
+		FileEpisode, // Always has FolderAnime as parent
+		FileExtraVideo, // Always has FolderExtra as parent
+		FileExtraAudio, // Always has FolderExtra as parent
 
 		Unknown // No clue what this file is
 	}
@@ -58,9 +60,11 @@ public static class AnimeScanner
 			var parentType = GetFolderType(namingOptions, parentPath);
 			var extension = Path.GetExtension(path);
 			var isVideo = namingOptions.VideoFileExtensions.Contains(extension);
+			var isAudio = namingOptions.AudioFileExtensions.Contains(extension);
 
-			if (isVideo && parentType == FileType.FolderExtra) type = FileType.FileExtra;
-			else if (isVideo && parentType == FileType.FolderAnime) type = FileType.FileEpisode;
+			if (isVideo && parentType == FileType.FolderAnime) type = FileType.FileEpisode;
+			else if (isVideo && parentType == FileType.FolderExtra) type = FileType.FileExtraVideo;
+			else if (isAudio && parentType == FileType.FolderExtra) type = FileType.FileExtraAudio;
 		}
 
 		return type;
@@ -104,9 +108,24 @@ public static class AnimeScanner
 		}
 
 		// Set extra metadata
-		if (type == FileType.FileExtra)
+		if (type == FileType.FileExtraVideo)
 		{
 			video.ExtraType = GetExtraType(anitomy);
+		}
+	}
+
+	public static void ApplyAudioMetadata(Audio audio, FileType type)
+	{
+		var fileName = Path.GetFileName(audio.Path);
+		var anitomy = new Anitomy(fileName);
+		audio.SortName = fileName;
+		audio.Name = fileName;
+		audio.ForcedSortName = fileName;
+
+		// Set extra metadata
+		if (type == FileType.FileExtraAudio)
+		{
+			audio.ExtraType = GetExtraType(anitomy);
 		}
 	}
 }
