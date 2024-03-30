@@ -20,7 +20,7 @@ Folders can be nested as much as you want, whenever a folder starts with a digit
 All shows have a "Season 1" season with their respective content.
 
 ### Definition
-- 
+
 - `/[folder]/[order]. [show]/[episode]`
 - `/[folder]/[folder]/[order]. [show]/[episode]`
 
