@@ -12,7 +12,8 @@ namespace Jellyfin.Plugin.Resolver.Resolver;
 
 public class ExtraAudioMetadataProvider(
 	ILogger<ExtraAudioMetadataProvider> logger,
-	NamingOptions namingOptions
+	NamingOptions namingOptions,
+	AnimeScanner animeScanner
 ) : ICustomMetadataProvider<Audio>
 {
 	public string Name => nameof(ExtraAudioMetadataProvider);
@@ -29,7 +30,7 @@ public class ExtraAudioMetadataProvider(
 		if (type != AnimeScanner.FileType.FileExtraAudio) return Task.FromResult(ItemUpdateType.None);
 
 		// Apply metadata
-		AnimeScanner.ApplyAudioMetadata(item, AnimeScanner.FileType.FileExtraAudio);
+		animeScanner.ApplyAudioMetadata(item, AnimeScanner.FileType.FileExtraAudio);
 		logger.LogDebug($"{item.Path} is {item.ExtraType}");
 		
 		// Return as edit

@@ -1,48 +1,21 @@
-using AnitomySharp;
+using System;
+using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Resolver.Api;
+namespace Jellyfin.Plugin.Resolver.Resolver;
 
-public class Anitomy
+public class Anitomy(ILogger<Anitomy> logger)
 {
-	public string EpisodeTitle { get; set; }
-	public string EpisodeNumber { get; set; }
-	public string AnimeType { get; set; }
-
-	public Anitomy()
-	{
-	}
-
-	public Anitomy(string filename)
-	{
-		CreateFromFileName(filename);
-	}
-
-	public int? GetEpisodeNumberAsInt()
-	{
-		if (EpisodeNumber == null) return null;
-		int.TryParse(EpisodeNumber.Split('.')[0], out var episodeNumber);
-		if (episodeNumber == 0) return null;
-		return episodeNumber;
-	}
-
-	private void CreateFromFileName(string filename)
-	{
-		var elements = AnitomySharp.AnitomySharp.Parse(filename);
-
-		foreach (var element in elements)
-		{
-			switch (element.Category)
-			{
-				case Element.ElementCategory.ElementEpisodeTitle:
-					EpisodeTitle = element.Value;
-					break;
-				case Element.ElementCategory.ElementEpisodeNumber:
-					EpisodeNumber = element.Value;
-					break;
-				case Element.ElementCategory.ElementAnimeType:
-					AnimeType = element.Value;
-					break;
-			}
-		}
-	}
+    public AnitomyResult? Parse(string fileName)
+    {
+        try
+        {
+            var elements = AnitomySharp.AnitomySharp.Parse(fileName);
+            return AnitomyResult.CreateFromElements(elements);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Failed to parse filename {fileName}", fileName);
+            return null;
+        }
+    }
 }

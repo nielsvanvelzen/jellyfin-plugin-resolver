@@ -18,12 +18,13 @@ public class AnimeEpisodeResolver(
 	ILogger<AnimeEpisodeResolver> logger,
 	IServerApplicationPaths appPaths,
 	ILibraryManager libraryManager,
-	NamingOptions namingOptions
+	NamingOptions namingOptions,
+	AnimeScanner animeScanner
 ) : IItemResolver, IMultiItemResolver
 {
 	public ResolverPriority Priority => ResolverPriority.Plugin;
 
-	public BaseItem ResolvePath(ItemResolveArgs args)
+	public BaseItem? ResolvePath(ItemResolveArgs args)
 	{
 		// Only for tv shows folders
 		// Empty collection type is "programdata" folder
@@ -63,7 +64,7 @@ public class AnimeEpisodeResolver(
 			var video = type == AnimeScanner.FileType.FileEpisode ? new Episode() : new Video();
 			video.Path = args.Path;
 
-			AnimeScanner.ApplyVideoMetadata(video, type.Value);
+			animeScanner.ApplyVideoMetadata(video, type.Value);
 			return video;
 		}
 		
@@ -115,7 +116,7 @@ public class AnimeEpisodeResolver(
 				Parent = parent,
 				CollectionType = collectionType,
 				FileInfo = file,
-				FileSystemChildren = Array.Empty<FileSystemMetadata>(),
+				FileSystemChildren = [],
 				LibraryOptions = new LibraryOptions()
 			});
 			if (item == null) leftOver.Add(file);

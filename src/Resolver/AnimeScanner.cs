@@ -4,14 +4,13 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Emby.Naming.Common;
 using Jellyfin.Extensions;
-using Jellyfin.Plugin.Resolver.Api;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Model.Entities;
 
 namespace Jellyfin.Plugin.Resolver.Resolver;
 
-public static class AnimeScanner
+public class AnimeScanner(Anitomy anitomy)
 {
 	public static readonly string[] AnimeTypeThemes = ["ED", "ENDING", "NCED", "NCOP", "OP", "OPENING"];
 	public static readonly string[] AnimeTypeTrailer = ["PV", "Teaser", "TRAILER", "CM", "SPOT"];
@@ -47,7 +46,7 @@ public static class AnimeScanner
 		return type;
 	}
 
-	public static FileType? GetFileType(NamingOptions namingOptions, string path, string parentPath, bool isDirectory)
+	public static FileType? GetFileType(NamingOptions namingOptions, string path, string? parentPath, bool isDirectory)
 	{
 		var type = FileType.Unknown;
 
@@ -57,7 +56,7 @@ public static class AnimeScanner
 		}
 		else
 		{
-			var parentType = GetFolderType(namingOptions, parentPath);
+			var parentType = GetFolderType(namingOptions, parentPath ?? string.Empty);
 			var extension = Path.GetExtension(path);
 			var isVideo = namingOptions.VideoFileExtensions.Contains(extension);
 			var isAudio = namingOptions.AudioFileExtensions.Contains(extension);
@@ -73,9 +72,9 @@ public static class AnimeScanner
 	public static string GetAnimeFolderName(string name) => Regex.Replace(name, @"^\d+\.\s", "");
 	public static int GetAnimeFolderIndex(string name) => int.Parse(Regex.Match(name, @"^(\d+)\.\s").Groups[1].Value);
 
-	public static ExtraType GetExtraType(Anitomy anitomy)
+	public static ExtraType GetExtraType(AnitomyResult? anitomy)
 	{
-		var animeType = anitomy.AnimeType ?? string.Empty;
+		var animeType = anitomy?.AnimeType ?? string.Empty;
 
 		if (AnimeTypeThemes.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.ThemeVideo;
 		if (AnimeTypeTrailer.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.Trailer;
@@ -84,10 +83,10 @@ public static class AnimeScanner
 		return ExtraType.Unknown;
 	}
 
-	public static void ApplyVideoMetadata(Video video, FileType type)
+	public void ApplyVideoMetadata(Video video, FileType type)
 	{
 		var fileName = Path.GetFileName(video.Path);
-		var anitomy = new Anitomy(fileName);
+		var anitomyResult = anitomy.Parse(fileName);
 		video.SortName = fileName;
 		video.Name = fileName;
 		video.ForcedSortName = fileName;
@@ -99,25 +98,25 @@ public static class AnimeScanner
 			video.ParentIndexNumber = 1;
 
 			// Set name
-			if (anitomy.EpisodeTitle != null) video.Name = anitomy.EpisodeTitle;
+			if (anitomyResult?.EpisodeTitle != null) video.Name = anitomyResult.EpisodeTitle;
 			// else if (episodeNumber != null) video.Name = $"Episode {episodeNumber}";
 
 			// Set index
-			var episodeNumber = anitomy.GetEpisodeNumberAsInt();
+			var episodeNumber = anitomyResult?.GetEpisodeNumberAsInt();
 			if (episodeNumber != null) video.IndexNumber = episodeNumber;
 		}
 
 		// Set extra metadata
 		if (type == FileType.FileExtraVideo)
 		{
-			video.ExtraType = GetExtraType(anitomy);
+			video.ExtraType = GetExtraType(anitomyResult);
 		}
 	}
 
-	public static void ApplyAudioMetadata(Audio audio, FileType type)
+	public void ApplyAudioMetadata(Audio audio, FileType type)
 	{
 		var fileName = Path.GetFileName(audio.Path);
-		var anitomy = new Anitomy(fileName);
+		var anitomyResult = anitomy.Parse(fileName);
 		audio.SortName = fileName;
 		audio.Name = fileName;
 		audio.ForcedSortName = fileName;
@@ -125,7 +124,7 @@ public static class AnimeScanner
 		// Set extra metadata
 		if (type == FileType.FileExtraAudio)
 		{
-			audio.ExtraType = GetExtraType(anitomy);
+			audio.ExtraType = GetExtraType(anitomyResult);
 		}
 	}
 }
