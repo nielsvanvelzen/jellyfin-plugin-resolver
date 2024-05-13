@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Jellyfin.Controller" Version="10.9.0-*" />
-		<PackageReference Include="AnitomySharp.NET6" Version="0.4.0" />
+		<PackageReference Include="Jellyfin.Controller" Version="10.9.*-*" />
+		<PackageReference Include="AnitomySharp.NET6" Version="0.5.1" />
 	</ItemGroup>
 </Project>
