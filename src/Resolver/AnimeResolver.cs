@@ -18,6 +18,7 @@ public class AnimeEpisodeResolver(
 	ILogger<AnimeEpisodeResolver> logger,
 	IServerApplicationPaths appPaths,
 	ILibraryManager libraryManager,
+	IServerApplicationPaths applicationPaths,
 	NamingOptions namingOptions,
 	AnimeScanner animeScanner
 ) : IItemResolver, IMultiItemResolver
@@ -32,6 +33,17 @@ public class AnimeEpisodeResolver(
 
 		// Only enable for anime libraries
 		if (!AnimeScanner.SupportsPath(args.Path)) return null;
+
+		// Re-implement SpecialFolderResolver root handling
+		if (args.IsPhysicalRoot)
+		{
+			return new AggregateFolder();
+		}
+
+		if (string.Equals(args.Path, applicationPaths.DefaultUserViewsPath, StringComparison.OrdinalIgnoreCase))
+		{
+			return new UserRootFolder();
+		}
 
 		var type = AnimeScanner.GetFileType(namingOptions, args.Path, args.Parent.Path, args.IsDirectory);
 		logger.LogDebug($"{args.Path} is {type}");
