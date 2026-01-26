@@ -39,7 +39,8 @@ public class AnimeScanner(Anitomy anitomy)
 
 		FileType type;
 
-		if (namingOptions.AllExtrasTypesFolderNames.Keys.Contains(basename, StringComparison.InvariantCultureIgnoreCase)) type = FileType.FolderExtra;
+		if (namingOptions.AllExtrasTypesFolderNames.Keys.Contains(basename,
+			    StringComparison.InvariantCultureIgnoreCase)) type = FileType.FolderExtra;
 		else if (Regex.IsMatch(basename, @"^\d+\.\s")) type = FileType.FolderAnime;
 		else type = FileType.FolderFranchise;
 
@@ -76,9 +77,11 @@ public class AnimeScanner(Anitomy anitomy)
 	{
 		var animeType = anitomy?.AnimeType ?? string.Empty;
 
-		if (AnimeTypeThemes.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.ThemeVideo;
+		if (AnimeTypeThemes.Contains(animeType, StringComparison.InvariantCultureIgnoreCase))
+			return ExtraType.ThemeVideo;
 		if (AnimeTypeTrailer.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.Trailer;
-		if (AnimeTypeInterview.Contains(animeType, StringComparison.InvariantCultureIgnoreCase)) return ExtraType.Interview;
+		if (AnimeTypeInterview.Contains(animeType, StringComparison.InvariantCultureIgnoreCase))
+			return ExtraType.Interview;
 
 		return ExtraType.Unknown;
 	}
@@ -88,7 +91,6 @@ public class AnimeScanner(Anitomy anitomy)
 		var fileName = Path.GetFileName(video.Path);
 		var anitomyResult = anitomy.Parse(fileName);
 		video.SortName = fileName;
-		video.Name = fileName;
 		video.ForcedSortName = fileName;
 
 		// Set episode metadata
@@ -98,12 +100,18 @@ public class AnimeScanner(Anitomy anitomy)
 			video.ParentIndexNumber = 1;
 
 			// Set name
+			
 			if (anitomyResult?.EpisodeTitle != null) video.Name = anitomyResult.EpisodeTitle;
 			// else if (episodeNumber != null) video.Name = $"Episode {episodeNumber}";
+			else video.Name = null;
 
 			// Set index
 			var episodeNumber = anitomyResult?.GetEpisodeNumberAsInt();
 			if (episodeNumber != null) video.IndexNumber = episodeNumber;
+		}
+		else
+		{
+			video.Name = fileName;
 		}
 
 		// Set extra metadata
